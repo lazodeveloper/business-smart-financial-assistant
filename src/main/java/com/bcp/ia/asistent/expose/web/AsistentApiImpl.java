@@ -15,7 +15,7 @@ import java.io.StringWriter;
 
 @RestController
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:4200", "https://mi-frontend-angular-app.azurewebsites.net"})
+@CrossOrigin(origins = {"http://localhost:4200", "https://salmon-river-028790710.3.azurestaticapps.net"})
 @RequiredArgsConstructor
 @RequestMapping("/financial-strategy")
 public class AsistentApiImpl {
