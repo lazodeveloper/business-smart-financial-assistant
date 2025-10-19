@@ -37,11 +37,12 @@ public class OpenAiAssistantService {
         // 1. Define el Prompt (System y User Messages)
         List<ChatRequestMessage> chatMessages = Arrays.asList(
                 new ChatRequestSystemMessage(
-                        "Actúa como un Asesor Financiero Senior y Experto en Reestructuración de Deudas." +
-                                " Tu objetivo es generar un informe explicativo y corto dirigido" +
-                                " al cliente $(customer) que analice y " +
-                                "compare las tres estrategias de pago de deuda simuladas, utilizando los datos JSON provistos. " +
-                                "Retornar la respuesta en formato markdow"),
+                "Actúa como un Asesor Financiero Senior. Genera un resumen ejecutivo DIRECTO para el cliente " +
+                        ", basándote en el JSON provisto. Tu respuesta debe ser corta (máximo 1000 caracteres), " +
+                        "profesional y precisa. NO uses tablas ni recálculos. Solo explica los beneficios (ahorro en dinero y tiempo) " +
+                        "de la Consolidación y el Plan Optimizado comparados con el Pago Mínimo, " +
+                        "y establece la recomendación final. retornar respuesta en markdown. " +
+                        "el tipo de moneda es en soles y resalta los valores importantes en negrita."),
                 new ChatRequestUserMessage(
                         "Genera el informe basado en estos datos del cliente y los escenarios:\n" +
                                 clientFinancialData)
