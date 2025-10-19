@@ -10,9 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 @RestController
 @Slf4j
 @CrossOrigin(origins = {"http://localhost:4200", "https://salmon-river-028790710.3.azurestaticapps.net"})
@@ -25,7 +22,6 @@ public class AsistentApiImpl {
     @GetMapping("/customers/{id}")
     public  Mono<ResponseEntity<CustomersEntity>> getCustomer(@PathVariable("id") Integer customerId){
 
-        //return Mono.just(ResponseEntity.ok("Hola Mundo"));
         return customerLoanService.getCustomer(customerId)
                 .flatMap(customerEntity -> Mono.just(ResponseEntity.ok(customerEntity)))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()))
@@ -37,7 +33,6 @@ public class AsistentApiImpl {
     @GetMapping("/strategies/{id}")
     public  Mono<ResponseEntity<Strategies>> getStrategies(@PathVariable("id") Integer customerId){
 
-        //return Mono.just(ResponseEntity.ok("Hola Mundo"));
         return customerLoanService.getStrategies(customerId)
                 .flatMap(customerEntity -> Mono.just(ResponseEntity.ok(customerEntity)))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()))

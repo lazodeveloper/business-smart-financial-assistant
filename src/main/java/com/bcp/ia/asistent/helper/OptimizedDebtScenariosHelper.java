@@ -21,18 +21,14 @@ public class OptimizedDebtScenariosHelper {
 
 
         return Optional.ofNullable(minimDebtScenario)
-                // 1️⃣ Calcular el total de pago mínimo
                 .map(scenario ->
                         disposableCashFlow.subtract(scenario.getTotalMinPayment()
                 ))
-                // 2️⃣ Filtrar solo si el flujo de caja alcanza el pago mínimo
                 .filter(excedentCash -> excedentCash.compareTo(BigDecimal.ZERO) > 0)
-                // 3️⃣ Si alcanza, optimizamos
                 .map(excedentCash ->  {
 
                     DebtDetails deudaPrioritaria = Optional.ofNullable(findMostDelinquentDebt(minimDebtScenario.getDebtDetails()))
                                     .orElseGet(() -> findDebtHighestInterest(minimDebtScenario.getDebtDetails()));
-                   // deudaPrioritaria.setProductId("priorityDebt");
                     log.info("deudaPrioritaria" + new Gson().toJson(deudaPrioritaria));
 
                     BigDecimal interestSavingsOnDebt = deudaPrioritaria.getProductType().equals("tarjeta") ?
@@ -83,20 +79,16 @@ public class OptimizedDebtScenariosHelper {
                                     .debtDetails(updatedDebts)
                                     .build();
                         })
-                // 4️⃣ Si no cumple condiciones, devolver el escenario original
                 .orElse(minimDebtScenario);
     }
 
     private static DebtDetails findMostDelinquentDebt(List<DebtDetails> debtDetails) {
         return debtDetails.stream()
-                // 1️⃣ Filtrar solo deudas con mora (> 0 días)
                 .filter(d -> Optional.ofNullable(d.getDaysPastDue()).orElse(0) > 0)
-                // 2️⃣ Seleccionar la deuda con más días de mora, y si hay empate, la de mayor tasa de interés
                 .max(Comparator
                         .comparing((DebtDetails d) -> Optional.ofNullable(d.getDaysPastDue()).orElse(0))
                         .thenComparing(d -> Optional.ofNullable(d.getAnnualRatePct()).orElse(BigDecimal.ZERO))
                 )
-                // 3️⃣ Si no hay ninguna con mora, devolver null
                 .orElse(null);
     }
 

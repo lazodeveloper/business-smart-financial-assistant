@@ -11,13 +11,13 @@ import java.util.Set;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PaymentCalculatorHelper {
-    // Constante para el divisor de la tasa anual a mensual (100 para porcentaje * 12 meses)
+
     private static final BigDecimal MONTHS_IN_YEAR_PERCENT = new BigDecimal("1200");
-    // Para convertir el min_payment_pct
+
     private static final BigDecimal PERCENT_DIVISOR = new BigDecimal("100");
-    // Límite para evitar bucles infinitos (50 años)
+
     private static final int MAX_ITERATIONS = 600;
-    // Precisión para moneda (dos decimales)
+
     private static final int SCALE = 2;
 
     public static  BigDecimal getDisposableCashFlow(CustomersEntity customersEntity) {
@@ -28,19 +28,14 @@ public class PaymentCalculatorHelper {
         BigDecimal variabilidadIngreso  = cashflow.getIncomeVariabilityPct();
         BigDecimal gastosEsenciales  = cashflow.getEssentialExpensesAvg();
 
-        // Calcular la fracción de variabilidad: variabilidad / 100
         BigDecimal fraccionVariabilidad = variabilidadIngreso.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
 
-        // Calcular ingreso ajustado: ingresoMensual * (1 - variabilidad/100)
         BigDecimal ingresoAjustado = ingresoMensual.multiply(BigDecimal.ONE.subtract(fraccionVariabilidad));
 
-        // Calcular monto disponible: ingresoAjustado - gastosEsenciales
         BigDecimal montoDisponible = ingresoAjustado.subtract(gastosEsenciales);
 
-        // Aplicar margen de seguridad (opcional, 80%)
         BigDecimal montoSeguroDisponible = montoDisponible.multiply(BigDecimal.valueOf(0.8));
 
-        // Si el resultado es negativo, devolvemos 0
         return montoSeguroDisponible.max(BigDecimal.ZERO);
     }
 
@@ -58,30 +53,22 @@ public class PaymentCalculatorHelper {
             int termMonths) {
 
         if (annualRatePct.compareTo(BigDecimal.ZERO) == 0) {
-            // Manejar tasa cero: pago principal / plazo
             return principal.divide(new BigDecimal(termMonths), 2, RoundingMode.HALF_UP);
         }
 
-        // 1. Calcular la tasa de interés mensual 'i' (TasaAnual / 1200)
         BigDecimal monthlyRate = annualRatePct.divide(MONTHS_IN_YEAR_PERCENT, 10, RoundingMode.HALF_UP);
 
-        // 2. Calcular el factor (1 + i)^n
-        // Usamos Math.pow y luego lo convertimos a BigDecimal
         double factorDouble = Math.pow(monthlyRate.doubleValue() + 1, termMonths);
         BigDecimal factor = new BigDecimal(factorDouble);
 
-        // 3. Numerador: i * (1 + i)^n
         BigDecimal numerator = monthlyRate.multiply(factor);
 
-        // 4. Denominador: (1 + i)^n - 1
         BigDecimal denominator = factor.subtract(BigDecimal.ONE);
 
-        // 5. Cuota = Principal * (Numerador / Denominador)
         BigDecimal monthlyPayment = principal.multiply(
                 numerator.divide(denominator, 10, RoundingMode.HALF_UP)
         );
 
-        // 6. Redondear a dos decimales (la precisión de la cuota)
         return monthlyPayment.setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -98,16 +85,12 @@ public class PaymentCalculatorHelper {
             BigDecimal annualRatePct,
             int termMonths) {
 
-        // 1. Obtener la Cuota Mensual Fija
         BigDecimal monthlyPayment = calculateMonthlyPayment(principal, annualRatePct, termMonths);
 
-        // 2. Calcular el Pago Total = Cuota Mensual * Plazo
         BigDecimal totalPayments = monthlyPayment.multiply(new BigDecimal(termMonths));
 
-        // 3. Calcular el Interés Total = Pago Total - Principal
         BigDecimal totalInterest = totalPayments.subtract(principal);
 
-        // 4. Retornar el resultado con precisión de 2 decimales
         return totalInterest.setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -126,28 +109,16 @@ public class PaymentCalculatorHelper {
             BigDecimal annualRatePct,
             BigDecimal minPaymentPct) {
 
-        // 1. Calcular la tasa de interés mensual 'i' (TasaAnual / 1200)
-        // Se asume que esta es la tasa efectiva que se aplica al balance para el período.
         BigDecimal monthlyRate = annualRatePct.divide(MONTHS_IN_YEAR_PERCENT, 10, RoundingMode.HALF_UP);
 
-        // 2. Calcular el Interés Mensual del Período
-        // Interés = Balance * Tasa Mensual
         BigDecimal periodicInterest = balance.multiply(monthlyRate);
 
-        // 3. Calcular el Porcentaje Mínimo Requerido
-        // Convertir porcentaje: minPaymentPct / 100 (ej: 5.00% -> 0.05)
         BigDecimal minPaymentFactor = minPaymentPct.divide(PERCENT_DIVISOR, 10, RoundingMode.HALF_UP);
 
-        // Principal requerido = Balance * Factor Porcentual
         BigDecimal requiredPrincipalPayment = balance.multiply(minPaymentFactor);
 
-        // 4. Calcular el Pago Mínimo Total
-        // Pago Mínimo = Interés del Período + Porcentaje Requerido del Principal
-        // NOTA: Algunas instituciones solo usan el mayor de estos dos o incluyen fees.
-        // Aquí usamos la suma, que es el modelo más común para el mínimo total.
         BigDecimal minimumPayment = periodicInterest.add(requiredPrincipalPayment);
 
-        // 5. Opcional: Establecer un pago mínimo absoluto (ej: $25), no implementado aquí.
 
         return minimumPayment.setScale(2, RoundingMode.HALF_UP);
     }
@@ -166,49 +137,35 @@ public class PaymentCalculatorHelper {
             BigDecimal annualRatePct,
             BigDecimal minPaymentPct) {
 
-        // Usamos copias para no modificar los valores originales
         BigDecimal remainingBalance = balance.setScale(2, RoundingMode.HALF_UP);
         int totalMonths = 0;
 
-        // Tasa de interés mensual
         BigDecimal monthlyRate = annualRatePct.divide(MONTHS_IN_YEAR_PERCENT, 10, RoundingMode.HALF_UP);
 
-        // Factor de pago mínimo (ej: 0.05)
         BigDecimal minPaymentFactor = minPaymentPct.divide(PERCENT_DIVISOR, 10, RoundingMode.HALF_UP);
 
-        // La simulación se detiene si el balance es cero o si excede el límite
         while (remainingBalance.compareTo(BigDecimal.ZERO) > 0 && totalMonths < MAX_ITERATIONS) {
 
             totalMonths++;
 
-            // 1. Calcular los intereses que se añaden al saldo este mes: Interés = Saldo * Tasa Mensual
             BigDecimal periodicInterest = remainingBalance.multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);
 
-            // 2. Calcular el pago mínimo requerido
-            // Pago Mínimo = (Saldo * Factor Porcentual) + Interés
             BigDecimal requiredPrincipalPayment = remainingBalance.multiply(minPaymentFactor);
             BigDecimal minimumPayment = periodicInterest.add(requiredPrincipalPayment).setScale(2, RoundingMode.HALF_UP);
 
-            // Si el pago mínimo es menor que el saldo, pero el saldo es muy bajo,
-            // el pago es el saldo restante (para el último mes)
             if (minimumPayment.compareTo(remainingBalance) > 0) {
                 minimumPayment = remainingBalance;
             }
 
-            // 3. Determinar qué parte del pago mínimo va a Principal
-            // Pago al Principal = Pago Mínimo - Interés
             BigDecimal principalPaid = minimumPayment.subtract(periodicInterest);
 
-            // 4. Actualizar el Saldo Restante
             remainingBalance = remainingBalance.subtract(principalPaid);
 
-            // 5. Ajuste final (para evitar decimales pequeños negativos por el redondeo)
             if (remainingBalance.compareTo(BigDecimal.ZERO) < 0) {
                 remainingBalance = BigDecimal.ZERO;
             }
         }
 
-        // Si excedemos el límite, retornamos un valor especial (o lanzamos excepción)
         if (totalMonths >= MAX_ITERATIONS) {
             System.err.println("Advertencia: El cálculo de plazo excedió el límite de " + MAX_ITERATIONS + " meses.");
             return MAX_ITERATIONS;
@@ -235,43 +192,33 @@ public class PaymentCalculatorHelper {
         BigDecimal totalInterestPaid = BigDecimal.ZERO;
         int totalMonths = 0;
 
-        // Tasa de interés mensual y Factor de pago mínimo
         BigDecimal monthlyRate = annualRatePct.divide(MONTHS_IN_YEAR_PERCENT, 10, RoundingMode.HALF_UP);
         BigDecimal minPaymentFactor = minPaymentPct.divide(PERCENT_DIVISOR, 10, RoundingMode.HALF_UP);
 
-        // La simulación se detiene si el balance es cero o si excede el límite de iteraciones
         while (remainingBalance.compareTo(BigDecimal.ZERO) > 0 && totalMonths < MAX_ITERATIONS) {
 
             totalMonths++;
 
-            // 1. Calcular los intereses que se devengan este mes: Interés = Saldo * Tasa Mensual
             BigDecimal periodicInterest = remainingBalance.multiply(monthlyRate).setScale(SCALE, RoundingMode.HALF_UP);
 
-            // Acumular los intereses generados
             totalInterestPaid = totalInterestPaid.add(periodicInterest);
 
-            // 2. Calcular el Pago Mínimo Requerido (mismo cálculo que antes)
             BigDecimal requiredPrincipalPayment = remainingBalance.multiply(minPaymentFactor);
             BigDecimal minimumPayment = periodicInterest.add(requiredPrincipalPayment).setScale(SCALE, RoundingMode.HALF_UP);
 
-            // Para el último mes, el pago es el saldo restante (capital + interés)
             if (minimumPayment.compareTo(remainingBalance.add(periodicInterest)) > 0) {
                 minimumPayment = remainingBalance.add(periodicInterest);
             }
 
-            // 3. Determinar qué parte del pago mínimo va a Principal
             BigDecimal principalPaid = minimumPayment.subtract(periodicInterest);
 
-            // 4. Actualizar el Saldo Restante
             remainingBalance = remainingBalance.subtract(principalPaid);
 
-            // 5. Ajuste final
             if (remainingBalance.compareTo(BigDecimal.ZERO) < 0) {
                 remainingBalance = BigDecimal.ZERO;
             }
         }
 
-        // Retornamos el total de intereses acumulados
         return totalInterestPaid.setScale(SCALE, RoundingMode.HALF_UP);
     }
 
@@ -293,14 +240,11 @@ public class PaymentCalculatorHelper {
     ) {
         BigDecimal tasaMensual = annualRatePct.divide(BigDecimal.valueOf(12 * 100), 10, RoundingMode.HALF_UP);
 
-        // Escenario 1: pagando solo el mínimo
         BigDecimal interesesBase = calcularInteresesTotales(balance, tasaMensual, minPayment);
 
-        // Escenario 2: pagando mínimo + extra
         BigDecimal interesesOptimizado = calcularInteresesTotales(balance, tasaMensual,
                 minPayment.add(extraPayment));
 
-        // Ahorro = diferencia entre intereses
         return interesesBase.subtract(interesesOptimizado).setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -312,7 +256,7 @@ public class PaymentCalculatorHelper {
         BigDecimal saldo = balance;
 
         int meses = 0;
-        while (saldo.compareTo(BigDecimal.ZERO) > 0 && meses < 1000) { // límite de seguridad
+        while (saldo.compareTo(BigDecimal.ZERO) > 0 && meses < 1000) {
             BigDecimal interesMes = saldo.multiply(tasaMensual);
             saldo = saldo.add(interesMes).subtract(pago);
 
@@ -348,13 +292,11 @@ public class PaymentCalculatorHelper {
                 .divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP)
                 .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);
 
-        // Cuota base con fórmula de amortización francesa
         BigDecimal unoMasTasa = BigDecimal.ONE.add(tasaMensual);
         BigDecimal potencia = unoMasTasa.pow(plazoMeses);
         BigDecimal cuotaBase = montoPrestamo.multiply(tasaMensual).multiply(potencia)
                 .divide(potencia.subtract(BigDecimal.ONE), 10, RoundingMode.HALF_UP);
 
-        // Simular escenario base (sin pago extra)
         BigDecimal saldoBase = montoPrestamo;
         BigDecimal interesesBase = BigDecimal.ZERO;
         int mesesBase = 0;
@@ -367,7 +309,6 @@ public class PaymentCalculatorHelper {
             mesesBase++;
         }
 
-        // Simular escenario con pago extra
         BigDecimal saldoExtra = montoPrestamo;
         BigDecimal interesesExtra = BigDecimal.ZERO;
         int mesesExtra = 0;
@@ -385,7 +326,6 @@ public class PaymentCalculatorHelper {
             mesesExtra++;
         }
 
-        // Ahorro estimado en intereses
         BigDecimal ahorro = interesesBase.subtract(interesesExtra)
                 .setScale(2, RoundingMode.HALF_UP);
 

@@ -98,7 +98,6 @@ public class MinimDebtScenariosHelper {
 
     public static BigDecimal calculateWeightedAverageRate(List<DebtDetails> debtDetails) {
 
-        // Calcular el total de saldos
         BigDecimal totalSaldo = debtDetails.stream()
                 .map(d -> Optional.ofNullable(d.getCurrentBalance()).orElse(BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -107,21 +106,18 @@ public class MinimDebtScenariosHelper {
             return BigDecimal.ZERO;
         }
 
-        // Calcular suma ponderada: (saldo * tasa)
         BigDecimal sumaPonderada = debtDetails.stream()
                 .map(d -> {
                     BigDecimal saldo = Optional.ofNullable(d.getCurrentBalance()).orElse(BigDecimal.ZERO);
                     BigDecimal tasa = Optional.ofNullable(d.getAnnualRatePct()).orElse(BigDecimal.ZERO);
-                    // Convertir de porcentaje (ej: 28.5 → 0.285)
                     BigDecimal tasaDecimal = tasa.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
                     return saldo.multiply(tasaDecimal);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Tasa promedio ponderada = suma ponderada / total saldo → volver a porcentaje (x100)
         return sumaPonderada
                 .divide(totalSaldo, 6, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
-                .setScale(2, RoundingMode.HALF_UP); // redondeo final a 2 decimales
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }
