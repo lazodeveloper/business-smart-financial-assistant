@@ -3,6 +3,7 @@ package com.bcp.ia.asistent.business.impl;
 import com.bcp.ia.asistent.business.CustomerLoanService;
 import com.bcp.ia.asistent.caller.OfferMockService;
 import com.bcp.ia.asistent.caller.OpenAiAssistantService;
+import com.bcp.ia.asistent.model.dto.Assistant;
 import com.bcp.ia.asistent.model.dto.Scenarios;
 import com.bcp.ia.asistent.model.dto.Strategies;
 import com.bcp.ia.asistent.model.entity.CreditScoreHistoryEntity;
@@ -68,17 +69,22 @@ public class CustomerLoanServiceImpl implements CustomerLoanService {
                             .map(scenarios -> Strategies.builder()
                                     .scenarios(scenarios)
                                     .build())
-                            .flatMap( strategies ->
-                                    openAiAssistantService.generateFinancialReport(new Gson().toJson(strategies))
-                                            .map(
-                                            financialReport -> {
-                                                strategies.setCustomer(customersEntity.getFullName());
-                                                strategies.setDisposableCashFlow(disposableCashFlow);
-                                                strategies.setCreditScore(creditScore);
-                                                strategies.setRecommendedStrategy(financialReport);
-                                                return strategies;
-                                            }));
+                            .map(strategies ->
+                                            strategies.toBuilder()
+                                                .customer(customersEntity.getFullName())
+                                                .disposableCashFlow(disposableCashFlow)
+                                                .creditScore(creditScore)
+                                                    .build());
                 });
+    }
+
+    @Override
+    public Mono<Assistant> getAssistant(String prompt) {
+        return  openAiAssistantService.generateFinancialReport(prompt)
+                .map(data -> Assistant
+                        .builder()
+                        .data(data)
+                        .build() );
     }
 
     private Mono<List<Scenarios>> getScenarios(CustomersEntity customersEntity, Integer creditScore, BigDecimal disposableCashFlow) {

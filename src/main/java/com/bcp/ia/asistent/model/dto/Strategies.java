@@ -9,7 +9,7 @@ import java.util.List;
 
 @Getter
 @Setter
-@Builder
+@Builder(toBuilder = true)
 public class Strategies {
     private String customer;
     private BigDecimal disposableCashFlow;

@@ -1,6 +1,7 @@
 package com.bcp.ia.asistent.expose.web;
 
 import com.bcp.ia.asistent.business.CustomerLoanService;
+import com.bcp.ia.asistent.model.dto.Assistant;
 import com.bcp.ia.asistent.model.dto.Strategies;
 import com.bcp.ia.asistent.model.entity.CustomersEntity;
 import lombok.RequiredArgsConstructor;
@@ -39,5 +40,15 @@ public class AsistentApiImpl {
                 .doOnError(throwable -> log.info(String.valueOf(throwable)))
                 .onErrorResume(throwable -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .build()));
+    }
+
+    @PostMapping("/assistant")
+    public Mono<ResponseEntity<Assistant>> getAssistant(@RequestBody String prompt) {
+
+        return customerLoanService.getAssistant(prompt)
+                .map(ResponseEntity::ok)
+                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()))
+                .doOnError(error -> log.error("Error en getAssistant: ", error))
+                .onErrorResume(error -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()));
     }
 }
